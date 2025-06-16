@@ -1,6 +1,6 @@
 import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
-import { Task } from '@/types';
+import { Task, User } from '@/types';
 import { TaskCard } from './TaskCard';
 import { EmptyState } from './EmptyState';
 
@@ -11,9 +11,10 @@ interface KanbanColumnProps {
   tasks: Task[];
   animationDelay: string;
   onUpdate: () => void;
+  users: User[];
 }
 
-export function KanbanColumn({ id, title, indicatorColor, tasks, animationDelay, onUpdate }: KanbanColumnProps) {
+export function KanbanColumn({ id, title, indicatorColor, tasks, animationDelay, onUpdate, users }: KanbanColumnProps) {
   const { setNodeRef } = useDroppable({ id });
 
   return (
@@ -33,7 +34,7 @@ export function KanbanColumn({ id, title, indicatorColor, tasks, animationDelay,
         {tasks.length === 0 ? (
           <EmptyState />
         ) : (
-          tasks.map((task) => <TaskCard key={task.id} task={task} onUpdate={onUpdate} />)
+          tasks.map((task) => <TaskCard key={task.id} task={task} onUpdate={onUpdate} users={users} />)
         )}
       </div>
     </div>

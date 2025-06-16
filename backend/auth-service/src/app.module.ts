@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { HealthController } from './health.controller';
+import { User } from './users/entities/user.entity';
 
 @Module({
   imports: [
@@ -19,8 +20,10 @@ import { HealthController } from './health.controller';
         username: configService.get('DB_USERNAME', 'postgres'),
         password: configService.get('DB_PASSWORD', 'postgres'),
         database: configService.get('DB_DATABASE', 'task_management'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: configService.get('NODE_ENV', 'development') === 'development',
+        entities: [User],
+        synchronize: true,
+        logging: true,
+        autoLoadEntities: true,
       }),
       inject: [ConfigService],
     }),

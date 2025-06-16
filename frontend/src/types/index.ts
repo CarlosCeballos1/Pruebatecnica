@@ -1,44 +1,38 @@
 export interface User {
   id: string;
-  name: string;
   email: string;
-  avatar?: string;
-  role: 'admin' | 'member';
-  team?: string;
-  createdAt: string;
-  updatedAt: string;
+  firstName: string;
+  lastName: string;
+  role?: string;
+  name?: string;
 }
 
 export interface Project {
   id: string;
   name: string;
   description: string;
-  status: 'active' | 'completed' | 'paused';
-  members: string[];
-  createdAt: Date;
-  deadline?: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Task {
   id: string;
   title: string;
   description: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH';
-  assignee?: User;
-  project?: Project;
-  dueDate: string;
+  status: TaskStatus;
+  projectId: string;
+  assignedTo?: string;
   createdAt: string;
   updatedAt: string;
-  comments: Comment[];
 }
+
+export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE';
 
 export interface Comment {
   id: string;
   content: string;
   taskId: string;
   userId: string;
-  user?: User;
   createdAt: string;
   updatedAt: string;
 }
@@ -55,18 +49,24 @@ export interface Notification {
 export interface CreateTaskData {
   title: string;
   description: string;
-  priority: 'LOW' | 'MEDIUM' | 'HIGH';
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
-  dueDate?: string;
-  assigneeId?: string;
-  projectId?: string;
+  projectId: string;
+  status?: TaskStatus;
+  assignedTo?: string;
 }
 
-export interface UpdateTaskData extends Partial<CreateTaskData> {}
+export interface UpdateTaskData {
+  title?: string;
+  description?: string;
+  status?: TaskStatus;
+  projectId?: string;
+  assignedTo?: string;
+  dueDate?: string;
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH';
+}
 
 export interface AuthResponse {
   user: User;
-  token: string;
+  message: string;
 }
 
 export interface ApiError {

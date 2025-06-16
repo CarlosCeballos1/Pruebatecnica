@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
+import { CreateUserDto } from '../users/dto/create-user.dto';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -22,25 +23,30 @@ export class AuthService {
   async login(user: any) {
     const payload = { email: user.email, sub: user.id, role: user.role };
     return {
+      user,
       token: this.jwtService.sign(payload),
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-      },
     };
   }
 
-  async register(createUserDto: any) {
-    const user = await this.usersService.create(createUserDto);
-    const payload = { email: user.email, sub: user.id, role: user.role };
-    const token = this.jwtService.sign(payload);
+  async register(registerDto: CreateUserDto) {
+    // Si se proporciona name, dividirlo en firstName y lastName
+    if (registerDto.name && !registerDto.firstName && !registerDto.lastName) {
+      const nameParts = registerDto.name.split(' ');
+      registerDto.firstName = nameParts[0];
+      registerDto.lastName = nameParts.slice(1).join(' ') || nameParts[0];
+    }
+
+    if (!registerDto.firstName || !registerDto.lastName) {
+      throw new UnauthorizedException('El nombre y apellido son requeridos');
+    }
+
+    const user = await this.usersService.create(registerDto);
     const { password, ...result } = user;
+    const payload = { email: user.email, sub: user.id, role: user.role };
+    
     return {
-      token,
       user: result,
+      token: this.jwtService.sign(payload),
     };
   }
 } 

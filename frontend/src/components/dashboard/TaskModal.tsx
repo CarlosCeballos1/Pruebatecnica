@@ -74,43 +74,41 @@ export function TaskModal({ isOpen, onClose, task, onUpdate }: TaskModalProps) {
   });
 
   useEffect(() => {
-    const loadInitialData = async () => {
-      setIsLoadingData(true);
+    const fetchInitialData = async () => {
       try {
         const fetchedUsers = await apiClientInstance.getUsers();
         setUsers(fetchedUsers);
-
-        const fetchedProjects = await apiClientInstance.getProjects();
-        setProjects(fetchedProjects);
-
-        if (task) {
-          setValue('title', task.title);
-          setValue('description', task.description);
-          setValue('priority', task.priority || 'MEDIUM');
-          setValue('status', task.status as BackendTaskStatus);
-          setValue('dueDate', task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : null);
-          setValue('assigneeId', typeof task.assignee === 'object' && task.assignee ? task.assignee.id : task.assignee || null);
-          setValue('projectId', typeof task.project === 'object' && task.project ? task.project.id : task.project || null);
-        } else {
-          // For new tasks, set default assignee if user is logged in
-          if (user) {
-            setValue('assigneeId', user.id);
-          }
-        }
       } catch (error) {
         console.error('Error al cargar datos iniciales:', error);
-        toast.error('Error al cargar usuarios o proyectos.');
-      } finally {
-        setIsLoadingData(false);
       }
     };
+    fetchInitialData();
+  }, []);
 
-    if (isOpen) {
-      loadInitialData();
+  useEffect(() => {
+    if (task) {
+      setValue('title', task.title);
+      setValue('description', task.description);
+      setValue('priority', task.priority || 'MEDIUM');
+      setValue('status', task.status as BackendTaskStatus);
+      setValue('dueDate', task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : null);
+      
+      // Mejorar la lógica de asignación del usuario
+      if (task.assignee) {
+        const assigneeId = typeof task.assignee === 'object' ? task.assignee.id : task.assignee;
+        setValue('assigneeId', assigneeId);
+      } else {
+        setValue('assigneeId', null);
+      }
+      
+      setValue('projectId', typeof task.project === 'object' && task.project ? task.project.id : task.project || null);
     } else {
-      reset(); // Reset form when modal closes
+      // For new tasks, set default assignee if user is logged in
+      if (user) {
+        setValue('assigneeId', user.id);
+      }
     }
-  }, [isOpen, user, task, setValue, reset]);
+  }, [task, setValue, user]);
 
   const onSubmit = async (data: TaskFormData) => {
     try {
@@ -121,15 +119,15 @@ export function TaskModal({ isOpen, onClose, task, onUpdate }: TaskModalProps) {
       const taskDataToSend = {
         ...data,
         dueDate: dueDateISO,
-        assigneeId: data.assigneeId || undefined, // Send undefined if null/empty
-        projectId: data.projectId || undefined,   // Send undefined if null/empty
+        assignedTo: data.assigneeId || null,
+        projectId: data.projectId || null,
       };
 
       if (task) {
-        await apiClientInstance.updateTask(task.id, taskDataToSend);
+        const updatedTask = await apiClientInstance.updateTask(task.id, taskDataToSend);
         toast.success('Tarea actualizada');
       } else {
-        await apiClientInstance.createTask(taskDataToSend);
+        const newTask = await apiClientInstance.createTask(taskDataToSend);
         toast.success('Tarea creada');
       }
       onUpdate();
@@ -237,7 +235,7 @@ export function TaskModal({ isOpen, onClose, task, onUpdate }: TaskModalProps) {
                     <select
                       id="priority"
                       {...register('priority')}
-                      className="block w-full bg-white/10 text-white border border-white/20 rounded-xl py-2 px-4 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                      className="block w-full bg-white/10 text-white border border-white/20 rounded-xl py-2 px-4 focus:ring-purple-500 focus:border-purple-500 transition-all [&>option]:bg-gray-800 [&>option]:text-white"
                     >
                       <option value="LOW">Baja</option>
                       <option value="MEDIUM">Media</option>
@@ -255,7 +253,7 @@ export function TaskModal({ isOpen, onClose, task, onUpdate }: TaskModalProps) {
                     <select
                       id="status"
                       {...register('status')}
-                      className="block w-full bg-white/10 text-white border border-white/20 rounded-xl py-2 px-4 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                      className="block w-full bg-white/10 text-white border border-white/20 rounded-xl py-2 px-4 focus:ring-purple-500 focus:border-purple-500 transition-all [&>option]:bg-gray-800 [&>option]:text-white"
                     >
                       <option value="pending">Pendiente</option>
                       <option value="in_progress">En Progreso</option>
@@ -276,12 +274,12 @@ export function TaskModal({ isOpen, onClose, task, onUpdate }: TaskModalProps) {
                     <select
                       id="assigneeId"
                       {...register('assigneeId')}
-                      className="block w-full bg-white/10 text-white border border-white/20 rounded-xl py-2 px-4 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                      className="block w-full bg-white/10 text-white border border-white/20 rounded-xl py-2 px-4 focus:ring-purple-500 focus:border-purple-500 transition-all [&>option]:bg-gray-800 [&>option]:text-white"
                     >
-                      <option value="">Sin asignar</option>
+                      <option value="" className="text-white bg-gray-800">Sin asignar</option>
                       {users.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.name}
+                        <option key={u.id} value={u.id} className="text-white bg-gray-800">
+                          {`${u.firstName} ${u.lastName}`}
                         </option>
                       ))}
                     </select>
@@ -297,7 +295,7 @@ export function TaskModal({ isOpen, onClose, task, onUpdate }: TaskModalProps) {
                     <select
                       id="projectId"
                       {...register('projectId')}
-                      className="block w-full bg-white/10 text-white border border-white/20 rounded-xl py-2 px-4 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                      className="block w-full bg-white/10 text-white border border-white/20 rounded-xl py-2 px-4 focus:ring-purple-500 focus:border-purple-500 transition-all [&>option]:bg-gray-800 [&>option]:text-white"
                     >
                       <option value="">Sin proyecto</option>
                       {projects.map((p) => (

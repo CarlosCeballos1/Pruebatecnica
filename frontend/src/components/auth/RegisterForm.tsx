@@ -8,15 +8,21 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
-const loginSchema = z.object({
+const registerSchema = z.object({
   email: z.string().email('Email inválido'),
+  firstName: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
+  lastName: z.string().min(2, 'El apellido debe tener al menos 2 caracteres'),
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+  confirmPassword: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Las contraseñas no coinciden",
+  path: ["confirmPassword"],
 });
 
-type LoginFormData = z.infer<typeof loginSchema>;
+type RegisterFormData = z.infer<typeof registerSchema>;
 
-export function LoginForm() {
-  const { login } = useAuth();
+export function RegisterForm() {
+  const { register: registerUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
@@ -25,18 +31,18 @@ export function LoginForm() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
+  } = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
   });
 
-  const onSubmit = async (data: LoginFormData) => {
+  const onSubmit = async (data: RegisterFormData) => {
     try {
       setIsLoading(true);
-      await login(data.email, data.password);
-      toast.success('¡Bienvenido!');
+      await registerUser(data.email, data.password, `${data.firstName} ${data.lastName}`);
+      toast.success('¡Registro exitoso!');
       router.push('/dashboard');
     } catch (error) {
-      toast.error('Error al iniciar sesión. Por favor, verifica tus credenciales.');
+      toast.error('Error al registrarse. Por favor, intenta nuevamente.');
     } finally {
       setIsLoading(false);
     }
@@ -52,19 +58,51 @@ export function LoginForm() {
       </div>
 
       <div className="relative z-20 flex items-center justify-center min-h-screen p-5">
-        <div className="login-card bg-white/15 backdrop-blur-xl border border-white/20 rounded-3xl p-12 w-full max-w-md shadow-2xl relative overflow-hidden animate-slideUp">
+        <div className="register-card bg-white/15 backdrop-blur-xl border border-white/20 rounded-3xl p-12 w-full max-w-md shadow-2xl relative overflow-hidden animate-slideUp">
           {/* Card Inner Glow */}
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent"></div>
 
           <div className="text-center mb-10">
             <div className="w-16 h-16 bg-gradient-to-br from-[#ff6b6b] to-[#4ecdc4] rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg">
-              <span className="text-3xl">🔐</span>
+              <span className="text-3xl">👤</span>
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Acceso al Sistema</h1>
-            <p className="text-white/80">Ingresa tus credenciales para continuar</p>
+            <h1 className="text-3xl font-bold text-white mb-2">Crear Cuenta</h1>
+            <p className="text-white/80">Completa el formulario para registrarte</p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-white/90 text-sm font-semibold uppercase tracking-wider mb-2">
+                  Nombre
+                </label>
+                <input
+                  {...register('firstName')}
+                  type="text"
+                  className="w-full px-5 py-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-white/50 focus:bg-white/15 transition-all focus:translate-y-[-2px]"
+                  placeholder="Tu nombre"
+                />
+                {errors.firstName && (
+                  <p className="mt-2 text-sm text-red-400">{errors.firstName.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-white/90 text-sm font-semibold uppercase tracking-wider mb-2">
+                  Apellido
+                </label>
+                <input
+                  {...register('lastName')}
+                  type="text"
+                  className="w-full px-5 py-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-white/50 focus:bg-white/15 transition-all focus:translate-y-[-2px]"
+                  placeholder="Tu apellido"
+                />
+                {errors.lastName && (
+                  <p className="mt-2 text-sm text-red-400">{errors.lastName.message}</p>
+                )}
+              </div>
+            </div>
+
             <div>
               <label className="block text-white/90 text-sm font-semibold uppercase tracking-wider mb-2">
                 Email
@@ -73,7 +111,7 @@ export function LoginForm() {
                 {...register('email')}
                 type="email"
                 className="w-full px-5 py-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-white/50 focus:bg-white/15 transition-all focus:translate-y-[-2px]"
-                placeholder="Ingresa tu email"
+                placeholder="tu@email.com"
               />
               {errors.email && (
                 <p className="mt-2 text-sm text-red-400">{errors.email.message}</p>
@@ -104,20 +142,19 @@ export function LoginForm() {
               )}
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  type="checkbox"
-                  className="h-5 w-5 rounded border-white/20 bg-white/10 text-[#4ecdc4] focus:ring-[#4ecdc4]"
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-white/80">
-                  Recordar sesión
-                </label>
-              </div>
-              <a href="#" className="text-sm text-white/80 hover:text-white transition-colors">
-                ¿Olvidaste tu contraseña?
-              </a>
+            <div>
+              <label className="block text-white/90 text-sm font-semibold uppercase tracking-wider mb-2">
+                Confirmar Contraseña
+              </label>
+              <input
+                {...register('confirmPassword')}
+                type={showPassword ? 'text' : 'password'}
+                className="w-full px-5 py-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-white/50 focus:bg-white/15 transition-all focus:translate-y-[-2px]"
+                placeholder="••••••••"
+              />
+              {errors.confirmPassword && (
+                <p className="mt-2 text-sm text-red-400">{errors.confirmPassword.message}</p>
+              )}
             </div>
 
             <button
@@ -125,25 +162,15 @@ export function LoginForm() {
               disabled={isLoading}
               className="w-full py-4 px-6 bg-gradient-to-r from-[#ff6b6b] to-[#4ecdc4] text-white font-semibold rounded-xl uppercase tracking-wider hover:shadow-lg hover:shadow-[#ff6b6b]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Ingresando...' : 'Ingresar'}
+              {isLoading ? 'Registrando...' : 'Registrarse'}
             </button>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/20"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-transparent text-white/60">O</span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => router.push('/register')}
-              className="w-full py-4 px-6 bg-white/10 text-white font-semibold rounded-xl uppercase tracking-wider hover:bg-white/20 transition-all border border-white/20"
-            >
-              Crear nueva cuenta
-            </button>
+            <p className="text-center text-white/80">
+              ¿Ya tienes una cuenta?{' '}
+              <a href="/login" className="text-white hover:underline">
+                Inicia sesión
+              </a>
+            </p>
           </form>
         </div>
       </div>

@@ -10,9 +10,10 @@ interface ProjectCardProps {
   project: Project;
   onUpdate: () => void;
   onEdit: (project: Project) => void;
+  onDelete: (id: string) => Promise<void>;
 }
 
-export function ProjectCard({ project, onUpdate, onEdit }: ProjectCardProps) {
+export function ProjectCard({ project, onUpdate, onEdit, onDelete }: ProjectCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const { deleteProject } = useProjects();
 
@@ -20,19 +21,19 @@ export function ProjectCard({ project, onUpdate, onEdit }: ProjectCardProps) {
   console.log('Project status in ProjectCard:', project?.status);
 
   const handleDelete = async () => {
-    if (!confirm('¿Estás seguro de que deseas eliminar este proyecto?')) return;
-
-    setIsDeleting(true);
+    if (!project) return;
+    
     try {
-      await deleteProject(project.id);
-      toast.success('Proyecto eliminado correctamente');
-      onUpdate(); // Trigger re-load in ProjectsList
+      await onDelete(project.id);
     } catch (error) {
       console.error('Error al eliminar el proyecto:', error);
       toast.error('Error al eliminar el proyecto');
-    } finally {
-      setIsDeleting(false);
     }
+  };
+
+  const handleEdit = () => {
+    if (!project) return;
+    onEdit(project);
   };
 
   const getStatusColor = (status: Project['status']) => {
@@ -67,7 +68,7 @@ export function ProjectCard({ project, onUpdate, onEdit }: ProjectCardProps) {
             onClick={(e) => {
               e.stopPropagation();
               console.log('Edit button clicked for project:', project.id);
-              onEdit(project);
+              handleEdit();
             }}
             className="w-8 h-8 bg-white/10 border border-white/20 rounded-lg flex items-center justify-center text-sm transition-all hover:bg-white/20 hover:scale-110 z-20"
           >

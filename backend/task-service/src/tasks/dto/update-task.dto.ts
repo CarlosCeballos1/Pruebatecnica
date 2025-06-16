@@ -20,7 +20,7 @@ export class UpdateTaskDto {
 
   @IsString()
   @IsOptional()
-  assigneeId?: string;
+  assignedTo?: string;
 
   @IsString()
   @IsOptional()

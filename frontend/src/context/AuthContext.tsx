@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '@/types';
 import { apiClientInstance } from '@/lib/api';
 import { useRouter } from 'next/navigation';
@@ -9,6 +9,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -20,29 +21,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    const checkUser = async () => {
-      try {
-        const user = await apiClientInstance.getCurrentUser();
-        setUser(user);
-      } catch (error: any) {
-        // Solo establecemos el usuario como null si no es un error 401
-        // Los errores 401 son esperados cuando el usuario no está autenticado
-        if (error.response?.status !== 401) {
-          console.error('Error al verificar el usuario:', error);
-        }
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-    checkUser();
+    checkAuth();
   }, []);
+
+  const checkAuth = async () => {
+    try {
+      const userData = await apiClientInstance.getCurrentUser();
+      setUser(userData);
+    } catch (error) {
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await apiClientInstance.login(email, password);
-      setUser(response.user);
+      await apiClientInstance.login(email, password);
+      const userData = await apiClientInstance.getCurrentUser();
+      setUser(userData);
       router.push('/dashboard');
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const register = async (email: string, password: string, name: string) => {
+    try {
+      await apiClientInstance.register(email, password, name);
+      const userData = await apiClientInstance.getCurrentUser();
+      setUser(userData);
     } catch (error) {
       throw error;
     }
@@ -59,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

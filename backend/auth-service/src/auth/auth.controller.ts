@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { Response } from 'express';
+import { CreateUserDto } from '../users/dto/create-user.dto';
 
 @Controller('api/auth')
 export class AuthController {
@@ -19,7 +20,7 @@ export class AuthController {
   }
 
   @Post('register')
-  async register(@Body() registerDto: any, @Res({ passthrough: true }) res: Response) {
+  async register(@Body() registerDto: CreateUserDto, @Res({ passthrough: true }) res: Response) {
     const user = await this.authService.register(registerDto);
     const { token } = user;
     res.cookie('jwt', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 3600000 }); // 1 hour

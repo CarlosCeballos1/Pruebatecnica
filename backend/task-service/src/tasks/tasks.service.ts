@@ -6,6 +6,7 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
+import { UserService } from '../users/user.service';
 
 @Injectable()
 export class TasksService {
@@ -14,6 +15,7 @@ export class TasksService {
     private tasksRepository: Repository<Task>,
     private httpService: HttpService,
     private configService: ConfigService,
+    private userService: UserService,
   ) {}
 
   private async enrichTaskWithUserData(task: Task): Promise<Task> {
@@ -35,9 +37,23 @@ export class TasksService {
   }
 
   async create(createTaskDto: CreateTaskDto): Promise<Task> {
-    const task = this.tasksRepository.create(createTaskDto);
-    const savedTask = await this.tasksRepository.save(task);
-    return this.enrichTaskWithUserData(savedTask);
+    try {
+      const user = await this.userService.findOne(createTaskDto.assigneeId);
+      if (!user) {
+        throw new Error('Usuario no encontrado');
+      }
+
+      const task = this.tasksRepository.create({
+        ...createTaskDto,
+        assignee: user
+      });
+
+      const savedTask = await this.tasksRepository.save(task);
+      return savedTask;
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      throw error;
+    }
   }
 
   async findAll(): Promise<Task[]> {
@@ -60,9 +76,16 @@ export class TasksService {
 
   async update(id: string, updateTaskDto: UpdateTaskDto): Promise<Task> {
     const task = await this.findOne(id);
-    Object.assign(task, updateTaskDto);
-    const updatedTask = await this.tasksRepository.save(task);
-    return this.enrichTaskWithUserData(updatedTask);
+    if (!task) {
+      throw new Error('Task not found');
+    }
+
+    const updatedTask = await this.tasksRepository.save({
+      ...task,
+      ...updateTaskDto
+    });
+
+    return updatedTask;
   }
 
   async remove(id: string): Promise<void> {

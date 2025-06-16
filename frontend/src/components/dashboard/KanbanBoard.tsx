@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { DndContext, closestCorners } from '@dnd-kit/core';
-import { Task, BackendTaskStatus, FrontendTaskStatus } from '@/types';
+import { Task, BackendTaskStatus, FrontendTaskStatus, User } from '@/types';
 import { KanbanColumn } from './KanbanColumn';
 import { apiClientInstance } from '@/lib/api';
 import toast from 'react-hot-toast';
@@ -37,85 +37,74 @@ interface KanbanBoardProps {
 
 export function KanbanBoard({ reloadTrigger, searchQuery }: KanbanBoardProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadTasks = async () => {
-    console.log('Iniciando carga de tareas...');
+  const loadData = async () => {
     try {
       setLoading(true);
-      console.log('Llamando a apiClientInstance.getTasks()...');
-      const data = await apiClientInstance.getTasks();
-      console.log('Tareas recibidas:', data);
+      const [tasksData, usersData] = await Promise.all([
+        apiClientInstance.getTasks(),
+        apiClientInstance.getUsers()
+      ]);
       
       // Mapear los estados del backend a los IDs de columnas
-      const mappedTasks = data.map(task => ({
+      const mappedTasks = tasksData.map(task => ({
         ...task,
         status: statusMapping[task.status as BackendTaskStatus]
       }));
       
-      console.log('Tareas mapeadas:', mappedTasks);
       setTasks(mappedTasks);
+      setUsers(usersData);
     } catch (error) {
-      console.error('Error detallado al cargar tareas:', error);
-      toast.error('Error al cargar las tareas.');
+      console.error('Error detallado al cargar datos:', error);
+      toast.error('Error al cargar los datos.');
     } finally {
       setLoading(false);
-      console.log('Estado final de tareas:', tasks);
     }
   };
 
   useEffect(() => {
-    console.log('KanbanBoard montado, iniciando carga de tareas...');
-    loadTasks();
+    loadData();
   }, [reloadTrigger]);
 
   const refreshTasks = () => {
-    console.log('Refrescando tareas...');
-    loadTasks();
+    loadData();
   };
 
   const getTasksByColumn = (columnId: FrontendTaskStatus) => {
-    const filteredTasks = tasks.filter((task) => {
+    return tasks.filter((task) => {
       const matchesColumn = task.status === columnId;
       const matchesSearch = (task.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                             (task.description || '').toLowerCase().includes(searchQuery.toLowerCase());
       return matchesColumn && matchesSearch;
     });
-    console.log(`Tareas para columna ${columnId} (filtradas por búsqueda '${searchQuery}'):`, filteredTasks);
-    return filteredTasks;
   };
 
-  const handleDragEnd = async (event: any) => {
-    const { active, over } = event;
+  const handleDragEnd = async (result: DropResult) => {
+    if (!result.destination) return;
 
-    if (!over) return;
+    const { source, destination, draggableId } = result;
+    const draggedTask = tasks.find(task => task.id === draggableId);
 
-    if (active.id !== over.id) {
-      const draggedTask = tasks.find((task) => task.id === active.id);
-      if (!draggedTask) return;
+    if (!draggedTask) return;
 
-      const originalTasks = tasks;
-      const newColumnId = over.id as FrontendTaskStatus;
-      const newBackendStatus = reverseStatusMapping[newColumnId];
-      
-      console.log(`Moviendo tarea ${draggedTask.id} a estado ${newBackendStatus}`);
+    const newBackendStatus = destination.droppableId as TaskStatus;
+    
+    try {
+      const updatedTask = await apiClientInstance.updateTask(draggedTask.id, {
+        ...draggedTask,
+        status: newBackendStatus
+      });
 
-      // Optimistic update con el estado mapeado para la UI
-      setTasks((prevTasks) =>
-        prevTasks.map((task) =>
-          task.id === active.id ? { ...task, status: newColumnId } : task
+      setTasks(prevTasks => 
+        prevTasks.map(task => 
+          task.id === updatedTask.id ? updatedTask : task
         )
       );
-
-      try {
-        // Enviar al backend el estado original
-        await apiClientInstance.updateTask(active.id, { status: newBackendStatus });
-        toast.success(`Tarea '${draggedTask.title}' movida a '${columns.find(col => col.id === newColumnId)?.title || newColumnId}'.`);
-      } catch (error) {
-        console.error('Error al actualizar tarea:', error);
-        toast.error(`Error al mover la tarea '${draggedTask.title}'.`);
-        setTasks(originalTasks);
-      }
+    } catch (error) {
+      console.error('Error al actualizar tarea:', error);
+      toast.error('Error al actualizar la tarea');
     }
   };
 
@@ -140,6 +129,7 @@ export function KanbanBoard({ reloadTrigger, searchQuery }: KanbanBoardProps) {
             tasks={getTasksByColumn(column.id)}
             animationDelay={`animation-delay-${index * 0.1}s`}
             onUpdate={refreshTasks}
+            users={users}
           />
         ))}
       </div>

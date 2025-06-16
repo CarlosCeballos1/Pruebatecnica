@@ -5,17 +5,18 @@ import { usePathname } from 'next/navigation';
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: '🏠' },
   { name: 'Proyectos', href: '/projects', icon: '📁' },
-  { name: 'Mis Tareas', href: '/my-tasks', icon: '✅' },
-  { name: 'Calendario', href: '/calendar', icon: '📅' },
-  { name: 'Equipos', href: '/teams', icon: '👥' },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  onClose: () => void;
+}
+
+export function Sidebar({ onClose }: SidebarProps) {
   const { user } = useAuth();
   const pathname = usePathname();
 
   return (
-    <div className="w-72 bg-white/10 backdrop-blur-xl border-r border-white/10 p-8 relative">
+    <div className="bg-white/10 backdrop-blur-xl border-r border-white/10 p-8 relative h-full">
       {/* Sidebar Glow */}
       <div className="absolute top-0 right-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
 
@@ -35,6 +36,7 @@ export function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
+              onClick={onClose}
               className={`flex items-center gap-4 p-4 mb-2 rounded-xl text-white/70 no-underline transition-all relative overflow-hidden
                 ${isActive
                   ? 'bg-white/20 shadow-lg text-white translate-x-2'

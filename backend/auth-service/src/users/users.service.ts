@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
@@ -7,11 +7,35 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
-export class UsersService {
+export class UsersService implements OnModuleInit {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
   ) {}
+
+  async onModuleInit() {
+    await this.createDefaultAdmin();
+  }
+
+  private async createDefaultAdmin() {
+    const adminEmail = 'admin@example.com';
+    const existingAdmin = await this.usersRepository.findOne({
+      where: { email: adminEmail },
+    });
+
+    if (!existingAdmin) {
+      const adminDto: CreateUserDto = {
+        email: adminEmail,
+        firstName: 'Admin',
+        lastName: 'User',
+        password: 'Admin123!',
+        role: 'admin',
+      };
+
+      await this.create(adminDto);
+      console.log('Usuario administrador creado por defecto');
+    }
+  }
 
   async create(createUserDto: CreateUserDto): Promise<User> {
     const existingUser = await this.usersRepository.findOne({
@@ -32,8 +56,15 @@ export class UsersService {
     return savedUser;
   }
 
-  async findAll(): Promise<User[]> {
-    return this.usersRepository.find();
+  async findAll(): Promise<Partial<User>[]> {
+    const users = await this.usersRepository.find();
+    return users.map(user => ({
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role
+    }));
   }
 
   async findOne(id: string): Promise<User> {

@@ -193,9 +193,9 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                         {...register('status')}
                         className="block w-full bg-white/10 text-white border border-white/20 rounded-xl py-2 px-4 focus:ring-purple-500 focus:border-purple-500 transition-all"
                       >
-                        <option value="active">Activo</option>
-                        <option value="completed">Completado</option>
-                        <option value="paused">Pausado</option>
+                        <option value="active" className="bg-gray-800 text-white">Activo</option>
+                        <option value="completed" className="bg-gray-800 text-white">Completado</option>
+                        <option value="paused" className="bg-gray-800 text-white">Pausado</option>
                       </select>
                       {errors.status && (
                         <p className="mt-1 text-sm text-red-400">{errors.status.message}</p>
@@ -213,7 +213,7 @@ export function ProjectModal({ isOpen, onClose, project }: ProjectModalProps) {
                         className="block w-full bg-white/10 text-white border border-white/20 rounded-xl py-2 px-4 focus:ring-purple-500 focus:border-purple-500 transition-all h-32"
                       >
                         {users.map((u) => (
-                          <option key={u.id} value={u.id}>
+                          <option key={u.id} value={u.id} className="bg-gray-800 text-white">
                             {u.name} ({u.email})
                           </option>
                         ))}
