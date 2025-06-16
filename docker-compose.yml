@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: task_management
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d task_management"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    build:
+      context: ./backend/auth-service
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - DB_DATABASE=task_management
+      - JWT_SECRET=cc7c0a0b-3d4e-4f5a-9b8c-7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0
+      - JWT_EXPIRATION=1d
+      - PORT=3001
+      - AUTH_SERVICE_PORT=3001
+      - TASK_SERVICE_URL=http://task-service:3002
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  task-service:
+    build:
+      context: ./backend
+      dockerfile: task-service/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - DB_DATABASE=task_management
+      - JWT_SECRET=cc7c0a0b-3d4e-4f5a-9b8c-7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0
+      - JWT_EXPIRATION=1d
+      - PORT=3002
+      - AUTH_SERVICE_URL=http://auth-service:3001
+      - TASK_SERVICE_PORT=3002
+    ports:
+      - "3002:3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres_data: 
