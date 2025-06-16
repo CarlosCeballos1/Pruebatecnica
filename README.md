@@ -42,13 +42,13 @@ npm install
 ```
 ## Ejecución del Proyecto
 
-1. Iniciar los servicios backend:
+1. Iniciar los servicios frontend:
 ```bash
-cd backend
-npm run start:dev
+cd frontend
+npm run dev
 ```
 
-2. Iniciar el frontend:
+2. Iniciar el backend:
 ```bash
 docker-compose up -d --build
 ```
